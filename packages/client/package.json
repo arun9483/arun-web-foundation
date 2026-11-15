@@ -1,6 +1,6 @@
 {
   "name": "@arun-dev/client",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Browser helpers for a single-page app behind a backend-for-frontend login: apiFetch with a shared refresh lock, timeouts, login URLs and theme storage. No dependencies",
   "license": "MIT",
   "repository": {
