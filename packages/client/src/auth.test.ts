@@ -87,6 +87,32 @@ describe('apiFetch', () => {
   });
 });
 
+describe('startLogout', () => {
+  it('stops refreshing and going to login, so the logout redirects can finish', async () => {
+    stubServer(false);
+    const assign = vi.fn();
+    vi.stubGlobal('location', { pathname: '/', search: '', assign });
+    const auth = createAuth();
+    auth.startLogout();
+    const res = await auth.apiFetch('/api/shell/greeting');
+    expect(res.status).toBe(401);
+    expect(await auth.refreshFor('/mfe/x/entry.js')).toBe('login');
+    auth.goToLogin();
+    expect(refreshes).toBe(0);
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it('applies only to its own createAuth', async () => {
+    stubServer(false);
+    const assign = vi.fn();
+    vi.stubGlobal('location', { pathname: '/', search: '', assign });
+    createAuth().startLogout();
+    await createAuth().apiFetch('/api/shell/greeting');
+    expect(refreshes).toBe(1);
+    expect(assign).toHaveBeenCalledOnce();
+  });
+});
+
 describe('refreshFor', () => {
   it('refreshes only when the address still answers 401', async () => {
     stubServer(true);
