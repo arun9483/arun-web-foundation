@@ -1,0 +1,34 @@
+{
+  "name": "@arun-dev/client",
+  "version": "0.0.0",
+  "description": "Browser helpers for a single-page app behind a backend-for-frontend login: apiFetch with a shared refresh lock, timeouts, login URLs and theme storage. No dependencies",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arun9483/arun-web-foundation.git",
+    "directory": "packages/client"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "jsdom": "30.1.3"
+  }
+}
