@@ -55,15 +55,29 @@ export { loginRoutes, safeReturnTo, type LoginOptions } from './login.js';
 
 import type { OidcSettings } from './config.js';
 import type { IdpAdapter } from './adapter.js';
-import { keycloakAdapter } from './keycloak/keycloak.js';
 import { lazyIdp, type Idp } from './metadata.js';
 
-/** The IdP and its adapter, as `IDP_ADAPTER` names it (only `keycloak` so far). */
+/** Makes an IdP adapter for a discovered IdP, e.g. `keycloakAdapter` from `@arun-dev/server/auth/keycloak`. */
+export type IdpAdapterFactory = (idp: () => Promise<Idp>) => IdpAdapter;
+
+/**
+ * The IdP and its adapter. `adapters` names the adapters this server ships with, e.g.
+ * `{ keycloak: keycloakAdapter }`; `adapterName` (default `IDP_ADAPTER`) picks one. Without a name, the
+ * only adapter given is used. An unknown or missing name stops the server at start.
+ */
 export function connectIdp(
   settings: OidcSettings,
-  adapterName = process.env.IDP_ADAPTER ?? 'keycloak',
+  adapters: Record<string, IdpAdapterFactory>,
+  adapterName = process.env.IDP_ADAPTER,
 ): { idp: () => Promise<Idp>; adapter: IdpAdapter } {
-  if (adapterName !== 'keycloak') throw new Error(`Unknown IDP_ADAPTER: ${adapterName}`);
+  const names = Object.keys(adapters);
+  const name = adapterName ?? (names.length === 1 ? names[0] : undefined);
+  const make = name === undefined ? undefined : adapters[name];
+  if (!make) {
+    throw new Error(
+      `${name === undefined ? 'IDP_ADAPTER must be set' : `Unknown IDP_ADAPTER: ${name}`} (known: ${names.join(', ') || 'none'})`,
+    );
+  }
   const idp = lazyIdp(settings);
-  return { idp, adapter: keycloakAdapter(idp) };
+  return { idp, adapter: make(idp) };
 }
