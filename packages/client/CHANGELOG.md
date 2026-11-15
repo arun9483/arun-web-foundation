@@ -1,5 +1,11 @@
 # @arun-dev/client
 
+## 0.3.0
+
+### Minor Changes
+
+- a4490bf: `readAppConfig(id?)` reads the public settings a server placed in the page with `appConfigScript()` from `@arun-dev/server/http`; empty when missing or not a JSON object.
+
 ## 0.2.0
 
 ### Minor Changes
