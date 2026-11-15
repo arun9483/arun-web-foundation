@@ -4,6 +4,7 @@ export { healthRouter, readVersion, type VersionInfo, type HealthOptions } from 
 export { forward } from './forward.js';
 export { closeOnSignal } from './shutdown.js';
 export { requiredEnv } from './env.js';
+export { appConfigScript, type AppConfigValue } from './app-config.js';
 export {
   backendAuth,
   googleBackendAuth,
