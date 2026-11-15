@@ -1,0 +1,70 @@
+{
+  "name": "@arun-dev/server",
+  "version": "0.0.0",
+  "description": "Express building blocks: tracing, problem+json, health, graceful shutdown and a backend-for-frontend login with HttpOnly cookies",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arun9483/arun-web-foundation.git",
+    "directory": "packages/server"
+  },
+  "type": "module",
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "exports": {
+    "./http": {
+      "types": "./dist/http/index.d.ts",
+      "default": "./dist/http/index.js"
+    },
+    "./auth": {
+      "types": "./dist/auth/index.d.ts",
+      "default": "./dist/auth/index.js"
+    },
+    "./auth/keycloak": {
+      "types": "./dist/auth/keycloak/index.d.ts",
+      "default": "./dist/auth/keycloak/index.js"
+    }
+  },
+  "bin": {
+    "write-version": "bin/write-version.mjs"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "statuses": "2.0.2"
+  },
+  "peerDependencies": {
+    "express": "^5.0.0",
+    "jose": "^6.0.0",
+    "newrelic": "^14.0.0",
+    "openid-client": "^6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "newrelic": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/newrelic": "9.14.8",
+    "@types/statuses": "2.0.6",
+    "@types/supertest": "7.2.1",
+    "express": "5.3.0",
+    "jose": "6.2.17",
+    "newrelic": "14.8.0",
+    "openid-client": "6.8.9",
+    "supertest": "7.3.1"
+  },
+  "engines": {
+    "node": ">=24.22.1"
+  }
+}
