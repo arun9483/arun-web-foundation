@@ -24,7 +24,15 @@ export interface Auth {
   lockName: string;
   /** Where this page goes to log in, coming back to the same address. */
   loginUrl: () => string;
+  /** Goes to `loginUrl()`; does nothing once `startLogout()` has been called. */
   goToLogin: () => void;
+  /**
+   * Call when the logout form is submitted. The logout response clears the cookies while this page
+   * still runs, so a call answered after it gets `401`. From now on this page never refreshes and
+   * never goes to login: a login navigation would cancel the logout's redirects, and the server's
+   * logged-out page, which tells the other tabs, would never load.
+   */
+  startLogout: () => void;
   /** True when the server marked the page with `<meta name="<prefix>-login">` (login is on). */
   loginIsOn: () => boolean;
   /** The status of `url` without its body, or 0 when it does not answer in time. */
@@ -76,6 +84,7 @@ export function createAuth({
   }
 
   const refresh = () => fetch(urls.refresh, { method: 'POST' });
+  let loggingOut = false;
   const call = (url: string, signal?: AbortSignal) => fetchWithTimeout(url, apiTimeoutMs, signal);
 
   function loginUrl(): string {
@@ -84,7 +93,7 @@ export function createAuth({
   }
 
   function goToLogin(): void {
-    window.location.assign(loginUrl());
+    if (!loggingOut) window.location.assign(loginUrl());
   }
 
   async function headStatus(url: string): Promise<number> {
@@ -106,21 +115,25 @@ export function createAuth({
     lockName,
     loginUrl,
     goToLogin,
+    startLogout: () => {
+      loggingOut = true;
+    },
     loginIsOn: () => document.querySelector(`meta[name="${prefix}-login"]`) !== null,
     headStatus,
     refreshFor: (url) =>
       underRefreshLock(async () => {
         if ((await headStatus(url)) !== 401) return 'logged-in';
+        if (loggingOut) return 'login';
         const refreshed = await refresh();
         if (refreshed.ok) return 'logged-in';
         return refreshed.status === 401 ? 'login' : 'unavailable';
       }),
     apiFetch: async (url, signal) => {
       const first = await call(url, signal);
-      if (first.status !== 401) return first;
+      if (first.status !== 401 || loggingOut) return first;
       const res = await underRefreshLock(async () => {
         const retry = await call(url, signal);
-        if (retry.status !== 401) return retry;
+        if (retry.status !== 401 || loggingOut) return retry;
         const refreshed = await refresh();
         if (refreshed.ok) return call(url, signal);
         return refreshed.status === 401 ? retry : refreshed;
