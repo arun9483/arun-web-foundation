@@ -1,5 +1,5 @@
 import type { Server } from 'node:http';
-import newrelic from 'newrelic';
+import { newrelic } from '../newrelic.js';
 
 /** Stops new connections and lets requests in flight finish, giving up on them after `timeoutMs`. */
 export function drain(server: Server, timeoutMs: number): Promise<void> {
@@ -16,12 +16,13 @@ export function drain(server: Server, timeoutMs: number): Promise<void> {
 }
 
 /**
- * On SIGTERM or SIGINT, drains `server`, sends New Relic what it holds, then exits, so taking a pod
+ * On SIGTERM or SIGINT, drains `server`, sends New Relic what it holds (when installed), then exits, so taking a pod
  * away fails no request. `timeoutMs` stays under the 10 s a container gets before it is killed.
  */
 export function closeOnSignal(server: Server, timeoutMs = 8000): void {
   const stop = () => {
     void drain(server, timeoutMs).then(() => {
+      if (!newrelic) process.exit(0);
       newrelic.shutdown({ collectPendingData: true, timeout: 1000 }, () => {
         process.exit(0);
       });

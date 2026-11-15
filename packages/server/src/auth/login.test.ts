@@ -8,6 +8,7 @@ import { problemHandler } from '../http/problem.js';
 import { IdpUnavailableError, type IdpAdapter } from './adapter.js';
 import { cookieSealer } from './cookies.js';
 import { safeReturnTo, loginRoutes } from './login.js';
+import { authNames } from './names.js';
 import type { Idp } from './metadata.js';
 
 const ORIGIN = 'https://shop.test';
@@ -26,9 +27,14 @@ describe('safeReturnTo', () => {
   ])('%j → %s', (value, expected) => {
     expect(safeReturnTo(value)).toBe(expected);
   });
+
+  it('refuses the login routes under another base', () => {
+    expect(safeReturnTo('/session/login', '/session')).toBe('/');
+    expect(safeReturnTo('/auth/login', '/session')).toBe('/auth/login');
+  });
 });
 
-function app(): express.Express {
+function app(options: Partial<Parameters<typeof loginRoutes>[0]> = {}): express.Express {
   // These tests stop before any IdP call.
   const idp = () => Promise.reject(new Error('no IdP in this test'));
   const adapter = { isAccessToken: () => true } as unknown as IdpAdapter;
@@ -37,6 +43,7 @@ function app(): express.Express {
     adapter,
     publicOrigin: ORIGIN,
     sealer: cookieSealer('c'.repeat(64)),
+    ...options,
   });
   return express().use(routes).use(problemHandler);
 }
@@ -78,6 +85,37 @@ describe('addresses under /auth that are not pages (MVP-2 verification, F1)', ()
     const res = await request(app()).get(path);
     expect(res.status).toBe(404);
     expect(res.headers['content-type']).toContain('application/problem+json');
+  });
+});
+
+describe('login routes with other names', () => {
+  const custom = () =>
+    app({
+      names: authNames({ cookiePrefix: 'app', authPaths: { base: '/session', logout: 'end' } }),
+      appName: 'the <b>app</b>',
+    });
+
+  it('serves the routes under the base and clears cookies on the derived paths', async () => {
+    const res = await request(custom()).post('/session/refresh').set('origin', ORIGIN);
+    expect(res.status).toBe(401);
+    const cleared = (res.headers['set-cookie'] as unknown as string[]).map((c) =>
+      c.split(';').slice(0, 2).join(';'),
+    );
+    expect(cleared).toEqual([
+      'app_at=; Path=/',
+      'app_rt=; Path=/session',
+      'app_id=; Path=/session/end',
+    ]);
+    expect((await request(custom()).post('/auth/refresh').set('origin', ORIGIN)).status).toBe(404);
+  });
+
+  it('names the application, escaped, and tells other tabs on its own channel', async () => {
+    const page = await request(custom()).get('/session/end');
+    expect(page.status).toBe(405);
+    expect(page.text).toContain('Log out button in the &#60;b&#62;app&#60;/b&#62;.');
+    expect(page.text).toContain('Back to the &#60;b&#62;app&#60;/b&#62;');
+    const loggedOut = await request(custom()).get('/session/logged-out');
+    expect(loggedOut.text).toContain("new BroadcastChannel('app-auth')");
   });
 });
 

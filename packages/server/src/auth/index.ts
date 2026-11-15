@@ -14,14 +14,14 @@ export {
 } from './contract.js';
 export { TtlCache } from './cache.js';
 export {
-  COOKIES,
-  loginAttemptCookie,
-  readCookie,
-  setCookie,
-  clearCookie,
-  cookieSealer,
-  type CookieSealer,
-} from './cookies.js';
+  authNames,
+  DEFAULT_AUTH_PATHS,
+  type AuthNameOptions,
+  type AuthNames,
+  type AuthPaths,
+  type CookieName,
+} from './names.js';
+export { readCookie, setCookie, clearCookie, cookieSealer, type CookieSealer } from './cookies.js';
 export {
   requireUser,
   loggedInUser,

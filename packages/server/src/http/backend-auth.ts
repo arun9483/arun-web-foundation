@@ -1,4 +1,4 @@
-/** Headers for a call to the unit's backend. */
+/** Headers for a call to this server's backend. */
 export type BackendHeaders = () => Promise<Record<string, string>>;
 
 /** No auth: the mock backend on a developer's machine. */

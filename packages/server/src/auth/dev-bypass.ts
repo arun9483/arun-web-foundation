@@ -2,16 +2,16 @@ import type { RequestHandler } from 'express';
 import { HttpError } from '../http/problem.js';
 import type { LoggedInUser } from './backend.js';
 
-/** The user a standalone MFE acts as, without an IdP: development only. */
+/** The user every request acts as, without an IdP: development only. */
 export interface DevUser {
   sub: string;
-  /** This unit's roles. */
+  /** The user's roles here. */
   roles: string[];
 }
 
 /**
- * The development-only login bypass for a standalone MFE (MVP-2): `AUTH_DEV_BYPASS=true` makes the
- * FES and backend act as `AUTH_DEV_USER_SUB` with `AUTH_DEV_USER_ROLES` (comma-separated), with no
+ * The development-only login bypass (MVP-2): `AUTH_DEV_BYPASS=true` makes the FES and backend act
+ * as `AUTH_DEV_USER_SUB` with `AUTH_DEV_USER_ROLES` (comma-separated), with no
  * IdP and no cookies. Refuses to start in production (`NODE_ENV=production`) or on Cloud Run
  * (`K_SERVICE` is set), and warns at start.
  */
@@ -53,8 +53,7 @@ function devMe(user: DevUser) {
 /** The backend's `requireUser`, bypassed: the development user, `403` without a role. */
 export function devRequireUser(user: DevUser): RequestHandler {
   return (_req, res, next) => {
-    if (user.roles.length === 0)
-      throw new HttpError(403, 'No role in this unit (AUTH_DEV_USER_ROLES)');
+    if (user.roles.length === 0) throw new HttpError(403, 'No role (AUTH_DEV_USER_ROLES)');
     const loggedIn: LoggedInUser = {
       sub: user.sub,
       sid: 'dev',
@@ -74,8 +73,7 @@ export function devRequireUser(user: DevUser): RequestHandler {
 /** The FES gate, bypassed: the development user as `/me`, `403` without a role. */
 export function devFesGate(user: DevUser): { page: RequestHandler; api: RequestHandler } {
   const gate: RequestHandler = (_req, res, next) => {
-    if (user.roles.length === 0)
-      throw new HttpError(403, 'No role in this unit (AUTH_DEV_USER_ROLES)');
+    if (user.roles.length === 0) throw new HttpError(403, 'No role (AUTH_DEV_USER_ROLES)');
     res.locals.me = devMe(user);
     next();
   };

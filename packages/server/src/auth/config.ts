@@ -1,14 +1,14 @@
 import { requiredEnv } from '../http/env.js';
 
-/** How a server reaches the shop's identity provider (IdP). See MVP-2 in arun-mfe-platform. */
+/** How a server reaches the identity provider (IdP). See MVP-2 in arun-mfe-platform. */
 export interface OidcSettings {
   /** The issuer every token carries, e.g. `https://idp.test/realms/shop`. */
   issuer: string;
   /** Where this server reaches the IdP, e.g. `http://keycloak:8080/realms/shop` inside Docker. */
   internalUrl: string;
   /**
-   * This server's own client at the IdP: the Shell FES (login) and every backend have one. An MFE's
-   * FES has none: it only checks tokens and asks its backend.
+   * This server's own client at the IdP: the server that runs the login and every backend have one.
+   * A server that only checks tokens and asks its backend has none.
    */
   clientId?: string;
   clientSecret?: string;

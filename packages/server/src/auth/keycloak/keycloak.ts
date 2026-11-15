@@ -48,7 +48,7 @@ function toIdpUser(user: KeycloakUser): IdpUser {
  * access token, which needs only `realm-management` → `view-users`:
  *
  * - roles come from the user's groups, because `view-users` cannot look up a client's internal ID,
- *   which the role-mapping endpoints need; each unit grants its roles through its own groups;
+ *   which the role-mapping endpoints need; each client's roles are granted through groups;
  * - a session is live while its ID is among the user's sessions;
  * - an access token has the claim `typ: Bearer` (`ID` and `Refresh` for the others).
  */
@@ -99,11 +99,9 @@ export function keycloakAdapter(idp: () => Promise<Idp>, timeoutMs = 3000): IdpA
       const found = await admin<KeycloakUser>(user(sub));
       return found && toIdpUser(found);
     },
-    async getUnitRoles(sub, unit) {
+    async getClientRoles(sub, client) {
       const groups = await admin<KeycloakGroup[]>(`${user(sub)}/groups?briefRepresentation=false`);
-      const roles = new Set(
-        (groups ?? []).flatMap((g) => g.clientRoles?.[`${unit}-backend`] ?? []),
-      );
+      const roles = new Set((groups ?? []).flatMap((g) => g.clientRoles?.[client] ?? []));
       return [...roles].sort();
     },
     async isSessionActive(sub, sid) {

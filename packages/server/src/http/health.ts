@@ -25,7 +25,7 @@ export interface HealthOptions {
 }
 
 /**
- * A health response, the same from every server in the shop. It follows the IETF health check draft
+ * A health response, the same from every server. It follows the IETF health check draft
  * (draft-inadarei-api-health-check-06): `application/health+json`, with `503` for `fail`.
  */
 function sendHealth(res: Response, status: 'pass' | 'fail', version: VersionInfo): void {

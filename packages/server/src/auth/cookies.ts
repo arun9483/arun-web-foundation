@@ -1,21 +1,6 @@
 import { CompactEncrypt, compactDecrypt } from 'jose';
 import type { Request, Response } from 'express';
-
-/** The shop's session cookies (ADR 0003). Only the Shell FES sets them; every FES reads `shop_at`. */
-export const COOKIES = {
-  /** The lightweight access token, not encrypted: any FES checks it. */
-  accessToken: { name: 'shop_at', path: '/' },
-  /** The refresh token, encrypted: only the Shell FES's `/auth/*` routes receive it. */
-  refreshToken: { name: 'shop_rt', path: '/auth' },
-  /** The ID token, encrypted: only `/auth/logout` receives it. */
-  idToken: { name: 'shop_id', path: '/auth/logout' },
-} as const;
-
-/** The per-attempt login cookie's name; only `/auth/callback` receives it. */
-export const loginAttemptCookie = (state: string) => ({
-  name: `shop_tx_${state}`,
-  path: '/auth/callback',
-});
+import type { CookieName } from './names.js';
 
 /** A cookie value from the request, if present. */
 export function readCookie(req: Request, name: string): string | undefined {
@@ -29,12 +14,12 @@ export function readCookie(req: Request, name: string): string | undefined {
 
 /**
  * Sets an `HttpOnly; Secure; SameSite=Lax` cookie, always with its `Path`: a cookie set by an
- * `/auth/*` response would otherwise default to `Path=/auth`. Without `maxAgeMs` it lasts the
+ * response under the login routes would otherwise default to their base path. Without `maxAgeMs` it lasts the
  * browser session.
  */
 export function setCookie(
   res: Response,
-  cookie: { name: string; path: string },
+  cookie: CookieName,
   value: string,
   maxAgeMs?: number,
 ): void {
@@ -48,7 +33,7 @@ export function setCookie(
 }
 
 /** Clears a cookie: only a response naming the same `Path` can. */
-export function clearCookie(res: Response, cookie: { name: string; path: string }): void {
+export function clearCookie(res: Response, cookie: CookieName): void {
   res.clearCookie(cookie.name, {
     path: cookie.path,
     httpOnly: true,

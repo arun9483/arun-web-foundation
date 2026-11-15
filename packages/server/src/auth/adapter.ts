@@ -12,14 +12,14 @@ export interface IdpUser {
 }
 
 /**
- * The only IdP-specific code in a unit (ADR 0004). Everything else uses standard OIDC and OAuth.
+ * The only IdP-specific code (ADR 0004 in arun-mfe-platform). Everything else uses standard OIDC and OAuth.
  * Calls that reach the IdP throw `IdpUnavailableError` when it cannot answer; callers fail closed.
  */
 export interface IdpAdapter {
   /** Backend: the user's profile by sub, using the backend's service access token. */
   getUser(sub: string): Promise<IdpUser | undefined>;
-  /** Backend: the user's effective roles in one unit (`shell`, `catalog`, …), by sub. */
-  getUnitRoles(sub: string, unit: string): Promise<string[]>;
+  /** Backend: the user's effective roles on one client (e.g. `catalog-backend`), by sub. */
+  getClientRoles(sub: string, client: string): Promise<string[]>;
   /** Backend: whether the login session named by the token's sid is still live. */
   isSessionActive(sub: string, sid: string): Promise<boolean>;
   /** FES and backend: true only for an access token, never an ID or refresh token. */

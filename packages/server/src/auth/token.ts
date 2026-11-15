@@ -16,7 +16,7 @@ export interface AccessTokenChecks {
 export interface CheckedToken {
   sub: string;
   sid: string;
-  /** The APIs the token is for: a unit's backend is here only when the user holds one of its roles. */
+  /** The APIs the token is for: a backend is here only when the user holds one of its roles. */
   audience: string[];
 }
 

@@ -1,11 +1,11 @@
 import type { RequestHandler } from 'express';
 import { decodeProtectedHeader, errors, jwtVerify } from 'jose';
-import newrelic from 'newrelic';
 import * as client from 'openid-client';
 import { HttpError } from '../http/problem.js';
 import { IdpUnavailableError, type IdpAdapter } from './adapter.js';
 import { ownClient, type Idp } from './metadata.js';
 import { bearerToken } from './token.js';
+import { newrelic } from '../newrelic.js';
 
 /** The user a backend-to-backend call is for, recorded by the provider for tracing only (ADR 0005). */
 export const USER_SUB_HEADER = 'X-Shop-User-Sub';
@@ -81,7 +81,7 @@ export function requireService({ idp, adapter, audience, role }: ServiceOptions)
       throw new HttpError(403, `The caller lacks ${role}`);
     }
     const userSub = req.get(USER_SUB_HEADER);
-    if (userSub) newrelic.setUserID(userSub);
+    if (userSub) newrelic?.setUserID(userSub);
     const caller: ServiceCaller = {
       clientId: typeof claims.azp === 'string' ? claims.azp : 'unknown',
       ...(userSub ? { userSub } : {}),

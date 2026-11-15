@@ -3,9 +3,9 @@ import { IdpUnavailableError, type IdpAdapter } from './adapter.js';
 
 /** What a real or fake IdP holds, for the contract to check an adapter against (ADR 0004). */
 export interface ContractFixtures {
-  /** A user with roles in `unit`, and a live login session. */
-  user: { sub: string; sid: string; username: string; unit: string; roles: string[] };
-  /** A user with no role in `user.unit`. */
+  /** A user with roles on `client`, and a live login session. */
+  user: { sub: string; sid: string; username: string; client: string; roles: string[] };
+  /** A user with no role on `user.client`. */
   userWithoutRole: { sub: string };
   /** A login session that has ended (the user logged out). */
   endedSession: { sub: string; sid: string };
@@ -41,16 +41,18 @@ export async function checkAdapterContract(
   checked.push('getUser: a known user with OIDC fields; an unknown sub is undefined');
 
   assert.deepEqual(
-    [...(await adapter.getUnitRoles(f.user.sub, f.user.unit))].sort(),
+    [...(await adapter.getClientRoles(f.user.sub, f.user.client))].sort(),
     [...f.user.roles].sort(),
-    'getUnitRoles: the user’s roles in the unit',
+    'getClientRoles: the user’s roles on the client',
   );
   assert.deepEqual(
-    await adapter.getUnitRoles(f.userWithoutRole.sub, f.user.unit),
+    await adapter.getClientRoles(f.userWithoutRole.sub, f.user.client),
     [],
-    'getUnitRoles: none for a user without a role there',
+    'getClientRoles: none for a user without a role there',
   );
-  checked.push(`getUnitRoles: ${f.user.roles.join(', ')} in ${f.user.unit}; none without a role`);
+  checked.push(
+    `getClientRoles: ${f.user.roles.join(', ')} on ${f.user.client}; none without a role`,
+  );
 
   assert.equal(
     await adapter.isSessionActive(f.user.sub, f.user.sid),
@@ -100,7 +102,7 @@ export async function checkUnavailableContract(
 ): Promise<string> {
   const calls: [string, () => Promise<unknown>][] = [
     ['getUser', () => adapter.getUser(sub)],
-    ['getUnitRoles', () => adapter.getUnitRoles(sub, 'shell')],
+    ['getClientRoles', () => adapter.getClientRoles(sub, 'any-client')],
     ['isSessionActive', () => adapter.isSessionActive(sub, sid)],
   ];
   for (const [name, call] of calls) {
@@ -110,5 +112,5 @@ export async function checkUnavailableContract(
       `${name} throws IdpUnavailableError when the IdP is down`,
     );
   }
-  return 'getUser, getUnitRoles, isSessionActive throw IdpUnavailableError when the IdP cannot be reached';
+  return 'getUser, getClientRoles, isSessionActive throw IdpUnavailableError when the IdP cannot be reached';
 }

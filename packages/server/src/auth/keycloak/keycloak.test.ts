@@ -14,19 +14,27 @@ const people: Record<string, IdpUser> = {
   alice: { sub: 'alice', preferred_username: 'alice', enabled: true },
   bob: { sub: 'bob', preferred_username: 'bob', enabled: true },
 };
-const roles: Record<string, Record<string, string[]>> = { alice: { shell: ['shell-user'] } };
+const roles: Record<string, Record<string, string[]>> = {
+  alice: { 'shell-backend': ['shell-user'] },
+};
 const sessions: Record<string, string[]> = { alice: ['s1'] };
 
 const fake: IdpAdapter = {
   getUser: (sub) => Promise.resolve(people[sub]),
-  getUnitRoles: (sub, unit) => Promise.resolve(roles[sub]?.[unit] ?? []),
+  getClientRoles: (sub, client) => Promise.resolve(roles[sub]?.[client] ?? []),
   isSessionActive: (sub, sid) => Promise.resolve(sessions[sub]?.includes(sid) ?? false),
   isAccessToken: (_header, claims) => claims.kind === 'access',
   serviceRoles: (claims, client) => (claims.roles as Record<string, string[]>)[client] ?? [],
 };
 
 const fixtures: ContractFixtures = {
-  user: { sub: 'alice', sid: 's1', username: 'alice', unit: 'shell', roles: ['shell-user'] },
+  user: {
+    sub: 'alice',
+    sid: 's1',
+    username: 'alice',
+    client: 'shell-backend',
+    roles: ['shell-user'],
+  },
   userWithoutRole: { sub: 'bob' },
   endedSession: { sub: 'alice', sid: 's0' },
   unknownSub: 'nobody',
@@ -53,7 +61,7 @@ describe('IdP adapter contract (ADR 0004)', () => {
     const unavailable: IdpAdapter = {
       ...fake,
       getUser: down,
-      getUnitRoles: down,
+      getClientRoles: down,
       isSessionActive: down,
     };
     await expect(checkUnavailableContract(unavailable, 'alice', 's1')).resolves.toContain(

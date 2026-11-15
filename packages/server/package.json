@@ -48,6 +48,11 @@
     "newrelic": "^14.0.0",
     "openid-client": "^6.0.0"
   },
+  "peerDependenciesMeta": {
+    "newrelic": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/express": "5.0.6",
     "@types/newrelic": "9.14.8",

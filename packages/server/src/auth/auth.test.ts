@@ -11,6 +11,7 @@ import { oidcSettingsFromEnv } from './config.js';
 import { devBypassFromEnv, devRequireUser } from './dev-bypass.js';
 import { cookieSealer, readCookie } from './cookies.js';
 import { fesGate } from './fes.js';
+import { authNames } from './names.js';
 import { IdpUnavailableError, type IdpAdapter, type IdpUser } from './adapter.js';
 import type { Idp } from './metadata.js';
 import { requireService } from './service.js';
@@ -65,7 +66,7 @@ function fakeAdapter(overrides: Partial<IdpAdapter> = {}): IdpAdapter & { calls:
   const adapter = {
     calls: 0,
     getUser: () => Promise.resolve(alice),
-    getUnitRoles: () => Promise.resolve(['shell-user']),
+    getClientRoles: () => Promise.resolve(['shell-user']),
     isSessionActive: () => {
       adapter.calls++;
       return Promise.resolve(true);
@@ -167,9 +168,12 @@ describe('readCookie', () => {
   });
 });
 
-function backendApp(adapter: IdpAdapter): express.Express {
+function backendApp(
+  adapter: IdpAdapter,
+  options: Partial<Parameters<typeof requireUser>[0]> = {},
+): express.Express {
   const app = express();
-  app.use(requireUser({ idp, adapter, unit: 'shell' }));
+  app.use(requireUser({ idp, adapter, audience: 'shell-backend', ...options }));
   app.get('/me', meHandler);
   app.use(notFound);
   app.use(problemHandler);
@@ -177,7 +181,7 @@ function backendApp(adapter: IdpAdapter): express.Express {
 }
 
 describe('requireUser and /me (backend)', () => {
-  it('answers /me with OIDC fields and the unit roles, never enabled or sid', async () => {
+  it('answers /me with OIDC fields and the roles, never enabled or sid', async () => {
     const res = await request(backendApp(fakeAdapter()))
       .get('/me')
       .set('authorization', `Bearer ${await token()}`);
@@ -211,13 +215,39 @@ describe('requireUser and /me (backend)', () => {
     ).toBe(401);
   });
 
-  it('refuses a user without a role in the unit with 403', async () => {
-    const noRole = fakeAdapter({ getUnitRoles: () => Promise.resolve([]) });
+  it('refuses a user without a role with 403', async () => {
+    const noRole = fakeAdapter({ getClientRoles: () => Promise.resolve([]) });
     const res = await request(backendApp(noRole))
       .get('/me')
       .set('authorization', `Bearer ${await token()}`);
     expect(res.status).toBe(403);
     expect(res.headers['content-type']).toContain('application/problem+json');
+    expect(res.body).toMatchObject({ detail: 'No role' });
+  });
+
+  it('reads roles from rolesClient, defaulting to the audience', async () => {
+    const asked: string[] = [];
+    const adapter = fakeAdapter({
+      getClientRoles: (_sub, client) => {
+        asked.push(client);
+        return Promise.resolve(['viewer']);
+      },
+    });
+    const bearer = `Bearer ${await token()}`;
+    await request(backendApp(adapter)).get('/me').set('authorization', bearer);
+    await request(backendApp(adapter, { rolesClient: 'shell-roles' }))
+      .get('/me')
+      .set('authorization', bearer);
+    expect(asked).toEqual(['shell-backend', 'shell-roles']);
+  });
+
+  it('lets a user without a role through when requireRole is false', async () => {
+    const noRole = fakeAdapter({ getClientRoles: () => Promise.resolve([]) });
+    const res = await request(backendApp(noRole, { requireRole: false }))
+      .get('/me')
+      .set('authorization', `Bearer ${await token()}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ roles: [] });
   });
 
   it('fails closed with 503 when the IdP cannot answer', async () => {
@@ -260,7 +290,7 @@ describe('fesGate (FES)', () => {
     backend.close();
   });
 
-  function fesApp(): express.Express {
+  function fesApp(options: Partial<Parameters<typeof fesGate>[0]> = {}): express.Express {
     const gate = fesGate({
       idp,
       adapter: fakeAdapter(),
@@ -269,6 +299,7 @@ describe('fesGate (FES)', () => {
       backendAudience: 'shell-backend',
       backendTimeoutMs: 1000,
       cacheMs: 0,
+      ...options,
     });
     const ok: RequestHandler = (_req, res) => {
       res.json({ me: res.locals.me as unknown, bearer: Boolean(res.locals.accessToken) });
@@ -340,6 +371,32 @@ describe('fesGate (FES)', () => {
     meStatus = 500;
     expect((await request(fesApp()).get('/api/x').set('cookie', cookie)).status).toBe(503);
     expect(meCalls).toBeGreaterThan(0);
+    meStatus = 200;
+  });
+
+  it('uses the configured cookie, resume path, app name and no-access message', async () => {
+    const custom = fesApp({
+      names: authNames({ cookiePrefix: 'app', authPaths: { base: '/session' } }),
+      appName: 'the app',
+      noAccessMessage: 'Not for you',
+    });
+    const page = await request(custom).get('/page?x=1');
+    expect(page.status).toBe(302);
+    expect(page.headers.location).toBe('/session/resume?returnTo=%2Fpage%3Fx%3D1');
+    const other = `app_at=${await token({ aud: ['cart-backend'] })}`;
+    const api = await request(custom).get('/api/x').set('cookie', other);
+    expect(api.status).toBe(403);
+    expect(api.body).toMatchObject({ detail: 'Not for you' });
+    expect((await request(custom).get('/page').set('cookie', other)).text).toContain(
+      'You do not have access to the app.',
+    );
+    expect(
+      (
+        await request(custom)
+          .get('/api/x')
+          .set('cookie', `shop_at=${await token()}`)
+      ).status,
+    ).toBe(401);
   });
 });
 
