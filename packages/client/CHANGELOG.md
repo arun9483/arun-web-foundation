@@ -1,5 +1,11 @@
 # @arun-dev/client
 
+## 1.0.0
+
+### Major Changes
+
+- c51abd4: 1.0.0: the API is stable after MVP-3 (shared packages, configuration and isolated tenants). No change from 0.2.0 (server) and 0.3.0 (client).
+
 ## 0.3.0
 
 ### Minor Changes

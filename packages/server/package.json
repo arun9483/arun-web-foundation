@@ -1,6 +1,6 @@
 {
   "name": "@arun-dev/server",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Express building blocks: tracing, problem+json, health, graceful shutdown and a backend-for-frontend login with HttpOnly cookies",
   "license": "MIT",
   "repository": {
